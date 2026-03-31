@@ -1,0 +1,42 @@
+The issue sounds like this:
+
+The UI is conditionally hiding the response message text whenever hasMFData is true, even though the rest of the payload such as tempData or other structured data still renders correctly.
+
+More plainly:
+
+When customSuggestions = null and tempData = null, the normal message from the chat response JSON shows on the UI.
+
+When tempData or similar MF data is present, hasMFData becomes true.
+
+In that case, the UI renders the MF/temp data portion, but it does not render the message field.
+
+If they remove the hasMFData condition, the message appears again.
+
+So the likely bug is in the chat response card component:
+
+it probably has logic like “if hasMFData, render MF content instead of message”
+
+but it is missing the case where it should render both the structured MF/temp data and the regular response message
+
+Root cause
+A conditional render tied to hasMFData is too aggressive and suppresses the chat message text whenever temp/custom suggestion data exists.
+
+Expected behavior
+When MF/temp data exists, the UI should still show:
+
+the structured data section, and
+
+the response message text
+
+Actual behavior
+Only the structured data section is shown; the message is hidden.
+
+In one sentence
+The bug is a frontend rendering issue in the chat response card: responses with tempData/MF data are treated differently, and the message field is not being rendered when hasMFData is true.
+
+You could describe it to your team like this:
+
+The UI currently only shows the response message when there is no MF/temp data. When hasMFData is true, the structured data renders, but the chat message gets skipped. We likely need separate rendering for both conditions instead of using hasMFData to suppress the message entirely.
+
+I can also turn this into a cleaner Jira ticket or debugging note.
+
