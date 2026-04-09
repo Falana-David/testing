@@ -1,0 +1,258 @@
+Got you — you want this in a **Claude Opus-friendly format** (clean, structured, explicit, minimal ambiguity, no fluff).
+
+Here’s a **precise, implementation-ready spec** 👇
+
+---
+
+# 📘 UACP Invocation Flow (HCP-Based) — SPEC
+
+## 0. Overview
+
+This flow allows external clients to invoke UACP agents using **HCP multi-cloud authentication**, replacing the legacy Azure/WAF token process.
+
+### Key Changes
+
+* ❌ Removed: WAF token, Azure Service Principal
+* ✅ Added: HCP token (cloud auth)
+* ✅ Added: Client token (application identity)
+
+---
+
+# 1. Required Tokens
+
+## 1.1 Token A — HCP Token (Cloud Authentication)
+
+### Purpose
+
+Authenticate request at the platform level.
+
+### Endpoint
+
+```
+POST {HCP_AUTH_URL}/token
+```
+
+### Headers
+
+```
+Content-Type: application/x-www-form-urlencoded
+```
+
+### Body
+
+```
+client_id={HCP_CLIENT_ID}
+client_secret={HCP_CLIENT_SECRET}
+grant_type=client_credentials
+scope={SCOPE}
+```
+
+### Response
+
+```
+{
+  "access_token": "<HCP_TOKEN>"
+}
+```
+
+---
+
+## 1.2 Token B — Client Token (Application Identity)
+
+### Purpose
+
+Identify which client/application is invoking UACP.
+
+### Endpoint
+
+```
+POST {LINGO_SERVICE_URL}
+```
+
+### IMPORTANT
+
+* ❗ No Authorization header required
+* ❗ This endpoint must be publicly callable
+
+### Headers
+
+```
+Content-Type: application/json
+```
+
+### Body
+
+```json
+{
+  "client_id": "{MARKETPLACE_CLIENT_ID}"
+}
+```
+
+### Response
+
+```
+{
+  "client_token": "<CLIENT_TOKEN>"
+}
+```
+
+---
+
+# 2. Invoke UACP Agent
+
+## Endpoint
+
+```
+POST {UACP_BASE_URL}/invokeAgent
+```
+
+---
+
+## Headers
+
+```
+Authorization: Bearer <HCP_TOKEN>
+x-client-authorization: Bearer <CLIENT_TOKEN>
+Content-Type: application/json
+environment: stage
+```
+
+---
+
+## Request Body
+
+```json
+{
+  "agentId": "{AGENT_ID}",
+  "query": "{USER_INPUT}",
+  "clientId": "{CLIENT_ID}",
+  "owner": "{OPTIONAL_OWNER}"
+}
+```
+
+---
+
+## Response
+
+```json
+{
+  "response": "{AGENT_OUTPUT}"
+}
+```
+
+---
+
+# 3. Execution Order (Strict)
+
+```
+1. Generate HCP Token
+2. Generate Client Token (Lingo Service)
+3. Call UACP /invokeAgent with BOTH tokens
+```
+
+---
+
+# 4. Token Mapping
+
+| Token        | Source        | Header                 | Purpose         |
+| ------------ | ------------- | ---------------------- | --------------- |
+| HCP Token    | HCP Auth API  | Authorization          | Platform access |
+| Client Token | Lingo Service | x-client-authorization | App identity    |
+
+---
+
+# 5. Removed Components (DO NOT USE)
+
+```
+- WAF Token
+- Azure Service Principal
+- Tenant ID auth flow
+```
+
+---
+
+# 6. Constraints
+
+* HCP token must be valid before invoking UACP
+* Client token must be generated per client
+* Lingo token endpoint must NOT require auth
+* Both tokens must be included in UACP request
+* environment header must be set (e.g., stage)
+
+---
+
+# 7. Example cURL
+
+## 7.1 Get HCP Token
+
+```bash
+curl -X POST "{HCP_AUTH_URL}/token" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "client_id=YOUR_CLIENT_ID" \
+  -d "client_secret=YOUR_CLIENT_SECRET" \
+  -d "grant_type=client_credentials" \
+  -d "scope=YOUR_SCOPE"
+```
+
+---
+
+## 7.2 Get Client Token
+
+```bash
+curl -X POST "{LINGO_SERVICE_URL}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "client_id": "YOUR_MARKETPLACE_CLIENT_ID"
+  }'
+```
+
+---
+
+## 7.3 Invoke Agent
+
+```bash
+curl -X POST "{UACP_BASE_URL}/invokeAgent" \
+  -H "Authorization: Bearer YOUR_HCP_TOKEN" \
+  -H "x-client-authorization: Bearer YOUR_CLIENT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "environment: stage" \
+  -d '{
+    "agentId": "example-agent",
+    "query": "Hello",
+    "clientId": "example-client"
+  }'
+```
+
+---
+
+# 8. Mental Model
+
+```
+HCP Token → "Can you access the platform?"
+Client Token → "Who are you?"
+UACP Call → "What do you want the agent to do?"
+```
+
+---
+
+# 9. Summary
+
+This system:
+
+* Simplifies onboarding
+* Removes Azure dependency
+* Enables multi-cloud access
+* Standardizes agent invocation via HCP
+
+---
+
+If you want next level (and honestly this would impress your team heavy):
+
+I can convert this into:
+
+* Swagger/OpenAPI spec
+* Postman collection JSON
+* Internal Confluence doc format
+* Sequence diagram (for OMSCS / architecture)
+
+Just say 👍
