@@ -1,0 +1,34 @@
+Hey team — quick thoughts before we sync on the hackathon.
+
+I think we should lean into an **Interactive Failure Sandbox** idea for the frontend side.
+
+Basically, imagine someone is on a flow and hits a failure on something like ZIP validation, census mismatch, rate API failure, etc. Instead of just throwing an error or only giving a chatbot response, Lingo’s assistant steps in, explains what likely went wrong based on previous defect history, and suggests a fix.
+
+But the important part is instead of the user just clicking “apply” directly into prod and hoping for the best, they can click something like **“Test Safely”**. That opens a sandbox version of their current session state where they can try the fix, adjust values, rerun mocked validation, and visually confirm the workflow works before anything touches the real flow. Once it passes, they can promote the changes back.
+
+I think this could stand out because:
+
+* Most teams are probably going to do some version of “AI assistant helps user.” The sandbox gives us an actual visual/demo moment.
+* It fits the whole 10x engineer/self-service angle really well. Instead of opening tickets and waiting around, users can potentially resolve certain frontend workflow failures themselves in minutes.
+* It still aligns with what the lead asked for. The assistant is still there — we’re just extending it with a safe testing layer.
+* Architecturally it’s reusable too. The sandbox is basically a reusable session replay/state isolation shell. Different apps could plug into it later.
+* It also pairs well with Madan’s batch automation idea since we could show both together in the final demo.
+
+For scope, I’d keep it super focused:
+SAMX + one failure scenario (probably ZIP validation since that example keeps coming up).
+
+Maybe split work like:
+
+* one person builds a lightweight SAMX-style mock workflow
+* one person handles assistant/failure detection flow
+* one person builds the sandbox UI/state cloning piece (isolated React context or side-panel/modal)
+
+Then Day 2 is mostly polish/demo/storytelling.
+
+Only things I think are important:
+
+* real Anthropic/OpenAI API calls so the AI part doesn’t feel fake
+* sandbox should visually feel different from the live flow
+* some metric/counter showing “tickets avoided” or “time saved” for the presentation angle
+
+Curious what you all think. Open to other ideas too, but this feels more memorable than just another chatbot demo.
