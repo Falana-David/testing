@@ -1,0 +1,141 @@
+Story Summary: disableLingoChat Feature
+Background
+
+Lingo is currently embedded into client applications using two different integration methods:
+
+Legacy iFrame integration
+New Module Federation integration (this is the architecture this story targets)
+
+Today, whenever a user opens Lingo, the chat interface is immediately available. The chat footer (input field, send button, attachment button, etc.) is always visible, allowing users to ask any question as soon as they land on the page.
+
+The product team wants to change this experience for clients using the new Module Federation integration.
+
+Business Goal
+
+Many users immediately type unrelated or unsupported questions (for example, weather, jokes, or general knowledge), which unnecessarily consumes LLM tokens and often results in poor user guidance.
+
+Instead of allowing users to immediately type into the chat, the desired experience is for users to first interact with a set of capability tiles (such as "Find Published Reports" or "Search Documents"). These tiles guide users toward supported workflows before opening the normal chat experience.
+
+Not every client wants this behavior, so it must be configurable through a client-provided feature flag.
+
+New Client Flag
+
+The parent application will send Lingo a new boolean flag named:
+
+disableLingoChat
+
+This flag will be passed to Lingo through the existing client props/context during the Module Federation initialization process.
+
+Lingo is not responsible for deciding when the chat should be hidden. The parent application makes that decision and communicates it through this flag. Lingo simply respects the value it receives.
+
+Meaning of the Flag
+
+If disableLingoChat is true:
+
+Hide the ChatFooter when the user first lands on the welcome page.
+Only display the capability tiles.
+Force the user's first interaction to be selecting one of those tiles.
+
+If disableLingoChat is false:
+
+Preserve the current behavior.
+Display the ChatFooter immediately.
+No UI changes are required.
+Source of Truth
+
+One of the key implementation details discussed during the meeting is that disableLingoChat should become the source of truth for this feature.
+
+This means the application should not introduce additional business logic to determine whether the footer should be visible.
+
+Specifically, the implementation should not:
+
+Check user roles.
+Check client IDs.
+Determine whether this is the user's first login.
+Inspect anything happening outside of Lingo.
+
+Instead, every decision regarding the initial visibility of the ChatFooter should be based solely on the value of disableLingoChat.
+
+Because this value is only provided during initialization but is needed throughout the user session (especially when resetting the experience), it will likely need to be stored in shared state or context.
+
+Required Behavior
+1. Initial Page Load
+
+When the user first opens Lingo:
+
+Read the value of disableLingoChat.
+If it is true, hide the ChatFooter and display only the capability tiles.
+If it is false, preserve the existing experience and display the ChatFooter normally.
+
+This determines the initial state of the application.
+
+2. User Clicks a Capability Tile
+
+Once the user selects one of the capability tiles:
+
+Transition from the welcome screen into the normal chat experience.
+Re-enable the ChatFooter so the user can continue interacting naturally with the AI.
+
+From this point forward, the conversation behaves exactly as it does today.
+
+3. Active Conversation
+
+After the user has entered the chat experience:
+
+Keep the ChatFooter visible.
+No additional changes are required while the conversation is active.
+4. User Clicks "New Chat"
+
+Selecting "New Chat" should completely reset the experience back to the original welcome screen.
+
+When this occurs:
+
+Return to the welcome page.
+Reapply the original value of disableLingoChat.
+
+If the stored value is true, hide the ChatFooter again.
+
+If the stored value is false, display the ChatFooter again.
+
+The important point is that New Chat should behave exactly like the user's first page load, using the originally supplied flag rather than requesting a new value from the parent application.
+
+Components Involved
+
+The implementation primarily affects two areas:
+
+ChatFooter
+
+Controls the visibility of the chat input area.
+Should be hidden or shown based on the current application state and the stored value of disableLingoChat.
+
+Capability Tiles
+
+Detect when a user begins interacting with Lingo.
+Once a tile is selected, transition into the standard chat experience by enabling the ChatFooter.
+Overall Application Flow
+The host application launches Lingo using Module Federation.
+During initialization, it passes the disableLingoChat boolean.
+Lingo stores this value as the source of truth.
+On the welcome page:
+If disableLingoChat is true, hide the ChatFooter.
+If disableLingoChat is false, display the ChatFooter normally.
+When the user clicks a capability tile:
+Enable the ChatFooter.
+Continue with the normal conversation flow.
+While the conversation is active, leave the ChatFooter visible.
+If the user clicks "New Chat":
+Return to the welcome page.
+Reapply the original disableLingoChat value from shared state.
+Restore the correct initial experience.
+Important Non-Requirements
+
+This feature should not introduce any additional business logic or client-specific rules.
+
+The implementation should not:
+
+Determine whether the user is new or returning.
+Check client IDs.
+Check user permissions or roles.
+Depend on navigation occurring elsewhere in the parent dashboard.
+
+The only factor that determines the initial visibility of the ChatFooter is the value of disableLingoChat. Everything else is simply transitioning between the welcome screen, an active conversation, and the New Chat reset while consistently respecting that original flag.
